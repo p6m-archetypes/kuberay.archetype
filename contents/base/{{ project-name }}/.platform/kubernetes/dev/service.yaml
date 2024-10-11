@@ -1,0 +1,181 @@
+# This example shows how to configure a custom Kubernetes service for Ray Serve
+# by specifying the `serveService` field in the RayService CRD. 
+#           working_dir: "https://github.com/ray-project/serve_config_examples/archive/36862c251615e258a58285934c7c41cffd1ee3b7.zip"
+#           working_dir: "https://github.com/p6m-dev/base-inferencer/archive/heads/main.zip"
+apiVersion: ray.io/v1
+kind: RayService
+metadata:
+  labels:
+    app.kubernetes.io/name: kuberay
+    helm.sh/chart: ray-cluster-1.1.0-rc
+    app.kubernetes.io/instance: raycluster
+    app.kubernetes.io/managed-by: Helm
+  name: rayservice-kuberay  
+spec:
+  serveConfigV2: |
+    applications:{% for item in application %}{% if item["application_name"] == "inferencer" %}    
+      - name: inference_app
+        import_path: api.inferencer.main:ray_inferencer_deployment
+        route_prefix: /inference
+        runtime_env:
+          pip:
+            - fastapi
+            - pyyaml
+            - requests     
+{% elif item["application_name"] == "router" %}
+      - name: router
+        import_path: rayllm.backend:router_application
+        route_prefix: /
+        args:
+          models:
+            - ./models/continuous_batching/amazon--LightGPT.yaml
+            - ./models/continuous_batching/OpenAssistant--falcon-7b-sft-top1-696.yaml    
+{% elif item["application_name"] == "rayfast" %}
+      - name: fast_hi_app
+        import_path: api.rayfast.fast_hi:hi_fastapi
+        route_prefix: /hi2
+        runtime_env:
+          pip:
+            - fastapi                  
+        deployments:
+          - name: MyFastAPIDeployment
+            num_replicas: 1
+            ray_actor_options:
+              num_cpus: 0.2   
+        deployments:
+          - name: FastAPIDeployment
+            num_replicas: 1
+            ray_actor_options:
+              num_cpus: 0.2{% endif %}{% endfor %}
+      - name: fast_hello_app
+        import_path: fast_hello.hello_fastapi
+        route_prefix: /fast_hello
+        runtime_env:
+          working_dir: "https://github.com/jess1sd/serve_config_examples/archive/heads/master.zip"
+          pip:
+            - fastapi      
+        deployments:
+          - name: MyFastAPIDeployment
+            num_replicas: 1
+            ray_actor_options:
+              num_cpus: 0.2
+      - name: text_ml_app
+        import_path: text_ml.app
+        route_prefix: /summarize_translate
+        runtime_env:
+
+          working_dir: "https://github.com/jess1sd/serve_config_examples/archive/heads/master.zip"
+          pip:
+            - torch
+            - transformers
+        deployments:
+          - name: Translator
+            num_replicas: 1
+            ray_actor_options:
+              num_cpus: 0.2
+            user_config:
+              language: french
+          - name: Summarizer
+            num_replicas: 1
+            ray_actor_options:
+              num_cpus: 0.2
+      - name: fruit_app
+        import_path: fruit.deployment_graph
+        route_prefix: /fruit
+        runtime_env:
+          working_dir: "https://github.com/ray-project/test_dag/archive/78b4a5da38796123d9f9ffff59bab2792a043e95.zip"
+        deployments:
+          - name: MangoStand
+            num_replicas: 1
+            user_config:
+              price: 3
+            ray_actor_options:
+              num_cpus: 0.1
+          - name: OrangeStand
+            num_replicas: 1
+            user_config:
+              price: 2
+            ray_actor_options:
+              num_cpus: 0.1
+          - name: PearStand
+            num_replicas: 1
+            user_config:
+              price: 1
+            ray_actor_options:
+              num_cpus: 0.1
+          - name: FruitMarket
+            num_replicas: 1
+            ray_actor_options:
+              num_cpus: 0.1
+  rayClusterConfig:
+    rayVersion: '2.9.0' # should match the Ray version in the image of the containers
+    ######################headGroupSpecs#################################
+    # Ray head pod template.
+    headGroupSpec:
+      serviceType: NodePort
+      # The `rayStartParams` are used to configure the `ray start` command.
+      # See https://github.com/ray-project/kuberay/blob/master/docs/guidance/rayStartParams.md for the default settings of `rayStartParams` in KubeRay.
+      # See https://docs.ray.io/en/latest/cluster/cli.html#ray-start for all available options in `rayStartParams`.
+      rayStartParams: {}
+      # Pod template
+      template:
+        spec:
+          imagePullSecrets:
+            - name: regcred                                   
+          containers:
+            - name: ray-head
+              image: p6m-dev.jfrog.io/p6m-dev-docker/applications/ray-inferences-server:a77488841296952edac717eb3bfa57523afd703b # replaced anyscale/ray-llm:latest
+              imagePullPolicy: Always
+              # env:
+              #   - name: PYTHONPATH
+              #     value: "/workspace:${PYTHONPATH}"              
+              resources:
+                limits:
+                  cpu: 1
+                  memory: 4Gi
+                requests:
+                  cpu: 500m
+                  memory: 3Gi
+              # volumeMounts:
+              # - name: workdir
+              #   mountPath: /workspace                  
+    workerGroupSpecs:
+      # the pod replicas in this group typed worker
+      - replicas: 1
+        minReplicas: 1
+        maxReplicas: 5
+        # logical group name, for this called small-group, also can be functional
+        groupName: gpu-group
+        # The `rayStartParams` are used to configure the `ray start` command.
+        # See https://github.com/ray-project/kuberay/blob/master/docs/guidance/rayStartParams.md for the default settings of `rayStartParams` in KubeRay.
+        # See https://docs.ray.io/en/latest/cluster/cli.html#ray-start for all available options in `rayStartParams`.
+        rayStartParams: {}
+        # Pod template
+        template:
+          spec:
+            imagePullSecrets:
+              - name: regcred                
+            containers:
+              - name: ray-worker-llm # must consist of lower case alphanumeric characters or '-', and must start and end with an alphanumeric character (e.g. 'my-name',  or '123-abc'
+                image: p6m-dev.jfrog.io/p6m-dev-docker/applications/ray-inferences-server:a77488841296952edac717eb3bfa57523afd703b # replaced anyscale/ray-llm:latest
+                imagePullPolicy: Always          
+                lifecycle:
+                  preStop:
+                    exec:
+                      command: ["/bin/sh","-c","ray stop"]
+                resources:
+                  limits:
+                    nvidia.com/gpu: 1
+                    cpu: "1"
+                    memory: "4Gi"
+                  requests:
+                    nvidia.com/gpu: 1
+                    cpu: "500m"
+                    memory: "3Gi"
+            tolerations:
+              - key: "ray.io/node-type"
+                operator: "Equal"
+                value: "worker"
+                effect: "NoSchedule"            
+
+ 

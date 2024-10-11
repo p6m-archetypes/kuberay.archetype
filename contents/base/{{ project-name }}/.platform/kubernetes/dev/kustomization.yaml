@@ -1,0 +1,12 @@
+resources:
+#  - cluster.yaml
+ - service.yaml
+ - ingress.yaml
+helmCharts:
+- name: kuberay-operator
+  includeCRDs: true
+  valuesInline: {}
+  releaseName: kuberay-operator
+  namespace: kuberay
+  version: 1.0.0
+  repo: https://ray-project.github.io/kuberay-helm

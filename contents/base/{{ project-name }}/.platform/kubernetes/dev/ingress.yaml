@@ -1,0 +1,38 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  annotations:
+    alb.ingress.kubernetes.io/auth-idp-oidc: '{"issuer":"https://p6m.okta.com","authorizationEndpoint":"https://p6m.okta.com/oauth2/v1/authorize","tokenEndpoint":"https://p6m.okta.com/oauth2/v1/token","userInfoEndpoint":"https://p6m.okta.com/oauth2/v1/userinfo","secretName":"edge-oauth"}'
+    alb.ingress.kubernetes.io/auth-on-unauthenticated-request: authenticate
+    alb.ingress.kubernetes.io/auth-type: oidc
+    alb.ingress.kubernetes.io/certificate-arn: arn:aws:acm:us-west-2:288163945356:certificate/5bb51038-d9f0-4de8-8c8b-0b2802a0754f
+    alb.ingress.kubernetes.io/healthcheck-interval-seconds: "30"
+    alb.ingress.kubernetes.io/healthcheck-timeout-seconds: "5"
+    alb.ingress.kubernetes.io/healthy-threshold-count: "2"
+    alb.ingress.kubernetes.io/listen-ports: '[{"HTTP":80},{"HTTPS":443}]'
+    alb.ingress.kubernetes.io/scheme: internet-facing
+    alb.ingress.kubernetes.io/ssl-redirect: "443"
+    alb.ingress.kubernetes.io/tags: Environment=dev,Service=kuberay,Team=app
+    alb.ingress.kubernetes.io/target-type: instance
+    external-dns.alpha.kubernetes.io/hostname: ""
+    kubernetes.io/ingress.class: alb
+  labels:
+    p6m.dev/aws-region: us-west-2
+    p6m.dev/env-name: dev
+    p6m.dev/env-type: dev
+    p6m.dev/org-prefix: {{ org-name }}
+    p6m.dev/org-suffix: {{ venture-name }}
+    p6m.dev/shared: "false"
+  name: ray-service
+spec:
+  rules:
+  - host: kuberay.eks.us-west-2.aws.dev.{{ venture-name }}.{{ org-name }}.p6m.dev
+    http:
+      paths:
+      - backend:
+          service:
+            name: {{ ray-head-name }}
+            port:
+              name: dashboard
+        path: /
+        pathType: Prefix
