@@ -21,12 +21,12 @@ metadata:
     p6m.dev/env-name: dev
     p6m.dev/env-type: dev
     p6m.dev/org-prefix: {{ org-name }}
-    p6m.dev/org-suffix: {{ venture-name }}
+    p6m.dev/org-suffix: {{ solution-name }}
     p6m.dev/shared: "false"
   name: ray-service
 spec:
   rules:
-  - host: kuberay.eks.us-west-2.aws.dev.{{ venture-name }}.{{ org-name }}.p6m.dev
+  - host: kuberay.eks.us-west-2.aws.dev.{{ solution-name }}.{{ org-name }}.p6m.dev
     http:
       paths:
       - backend:
