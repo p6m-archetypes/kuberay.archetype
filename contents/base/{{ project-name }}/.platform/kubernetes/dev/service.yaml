@@ -124,7 +124,7 @@ spec:
             - name: regcred                                   
           containers:
             - name: ray-head
-              image: p6m-dev.jfrog.io/p6m-dev-docker/applications/ray-inferences-server:a77488841296952edac717eb3bfa57523afd703b # replaced anyscale/ray-llm:latest
+              image: p6m.jfrog.io/p6m-dev-docker/applications/ray-inferences-server:a77488841296952edac717eb3bfa57523afd703b # replaced anyscale/ray-llm:latest
               imagePullPolicy: Always
               # env:
               #   - name: PYTHONPATH
@@ -157,7 +157,7 @@ spec:
               - name: regcred                
             containers:
               - name: ray-worker-llm # must consist of lower case alphanumeric characters or '-', and must start and end with an alphanumeric character (e.g. 'my-name',  or '123-abc'
-                image: p6m-dev.jfrog.io/p6m-dev-docker/applications/ray-inferences-server:a77488841296952edac717eb3bfa57523afd703b # replaced anyscale/ray-llm:latest
+                image: p6m.jfrog.io/p6m-dev-docker/applications/ray-inferences-server:a77488841296952edac717eb3bfa57523afd703b # replaced anyscale/ray-llm:latest
                 imagePullPolicy: Always          
                 lifecycle:
                   preStop:
